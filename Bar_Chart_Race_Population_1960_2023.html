@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bar Chart Race - Évolution de la Population par Continent (1960-2023)</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .chart-container {
+            width: 800px;
+            margin: auto;
+        }
+        .bar {
+            fill-opacity: 0.7;
+        }
+        .bar-label {
+            font-size: 14px;
+            fill: black;
+        }
+        .year-label {
+            font-size: 40px;
+            font-weight: bold;
+            fill: gray;
+            text-anchor: end;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bar Chart Race - Évolution de la Population par Continent (1960-2023)</h1>
+    <div class="chart-container">
+        <svg id="bar-chart" width="800" height="500"></svg>
+    </div>
+
+    <script>
+        const populationData = [
+            { year: 1960, Africa: 285000000, Asia: 1670000000, Europe: 605000000, NorthAmerica: 204000000, SouthAmerica: 200000000, Oceania: 13000000 },
+            { year: 1970, Africa: 365000000, Asia: 2100000000, Europe: 656000000, NorthAmerica: 232000000, SouthAmerica: 250000000, Oceania: 16000000 },
+            { year: 1980, Africa: 478000000, Asia: 2630000000, Europe: 694000000, NorthAmerica: 255000000, SouthAmerica: 300000000, Oceania: 19000000 },
+            { year: 1990, Africa: 631000000, Asia: 3200000000, Europe: 721000000, NorthAmerica: 285000000, SouthAmerica: 350000000, Oceania: 22000000 },
+            { year: 2000, Africa: 811000000, Asia: 3750000000, Europe: 730000000, NorthAmerica: 314000000, SouthAmerica: 400000000, Oceania: 25000000 },
+            { year: 2010, Africa: 1020000000, Asia: 4200000000, Europe: 741000000, NorthAmerica: 344000000, SouthAmerica: 450000000, Oceania: 27000000 },
+            { year: 2020, Africa: 1250000000, Asia: 4600000000, Europe: 746000000, NorthAmerica: 368000000, SouthAmerica: 500000000, Oceania: 30000000 },
+            { year: 2023, Africa: 1400000000, Asia: 4700000000, Europe: 750000000, NorthAmerica: 380000000, SouthAmerica: 520000000, Oceania: 31000000 }
+        ];
+
+        const width = 800, height = 500;
+        const svg = d3.select("#bar-chart");
+        const margin = { top: 50, right: 50, bottom: 50, left: 150 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        
+        const xScale = d3.scaleLinear().range([0, innerWidth]);
+        const yScale = d3.scaleBand().range([0, innerHeight]).padding(0.2);
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+        
+        const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+        g.append("g").attr("class", "x-axis").attr("transform", `translate(0,${innerHeight})`);
+        g.append("g").attr("class", "y-axis");
+
+        const yearLabel = g.append("text")
+            .attr("class", "year-label")
+            .attr("x", innerWidth)
+            .attr("y", innerHeight - 10);
+        
+        function updateChart(yearIndex) {
+            const data = populationData[yearIndex];
+            const year = data.year;
+            const formattedData = Object.keys(data)
+                .filter(d => d !== "year")
+                .map(key => ({ continent: key, population: data[key] }));
+            
+            xScale.domain([0, d3.max(formattedData, d => d.population)]);
+            yScale.domain(formattedData.map(d => d.continent));
+            
+            g.select(".x-axis").transition().duration(500).call(d3.axisBottom(xScale).ticks(5, "s"));
+            g.select(".y-axis").transition().duration(500).call(d3.axisLeft(yScale));
+            
+            const bars = g.selectAll(".bar").data(formattedData, d => d.continent);
+            
+            bars.enter()
+                .append("rect")
+                .attr("class", "bar")
+                .attr("y", d => yScale(d.continent))
+                .attr("height", yScale.bandwidth())
+                .attr("fill", d => colorScale(d.continent))
+                .attr("width", 0)
+                .transition().duration(500)
+                .attr("width", d => xScale(d.population));
+            
+            bars.transition().duration(500)
+                .attr("y", d => yScale(d.continent))
+                .attr("width", d => xScale(d.population));
+            
+            bars.exit().transition().duration(500).attr("width", 0).remove();
+            
+            const labels = g.selectAll(".bar-label").data(formattedData, d => d.continent);
+            
+            labels.enter()
+                .append("text")
+                .attr("class", "bar-label")
+                .attr("y", d => yScale(d.continent) + yScale.bandwidth() / 2)
+                .attr("x", d => xScale(d.population) + 5)
+                .attr("dy", "0.35em")
+                .text(d => d.population.toLocaleString());
+            
+            labels.transition().duration(500)
+                .attr("x", d => xScale(d.population) + 5)
+                .text(d => d.population.toLocaleString());
+            
+            labels.exit().remove();
+            
+            yearLabel.text(year);
+        }
+        
+        let yearIndex = 0;
+        function step() {
+            updateChart(yearIndex);
+            yearIndex = (yearIndex + 1) % populationData.length;
+            setTimeout(step, 2000);
+        }
+        
+        step();
+    </script>
+</body>
+</html>

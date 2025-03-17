@@ -3,52 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de Bord - Population & IDH</title>
+    <title>Dashboard Population & IDH</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
             text-align: center;
         }
-        h2 {
-            color: #333;
-        }
         .container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 20px;
-            max-width: 1200px;
-            margin: auto;
+            margin-top: 20px;
         }
-        iframe {
-            width: 100%;
-            height: 500px;
-            border: none;
-            background: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        .chart {
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+            background-color: #fff;
+            position: relative;
+        }
+        .tooltip {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 8px;
+            font-size: 14px;
+            pointer-events: none;
+            display: none;
+            border-radius: 4px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+        .legend {
+            font-size: 12px;
+            font-family: Arial, sans-serif;
         }
     </style>
 </head>
 <body>
-    <h1>Tableau de Bord - Population & IDH</h1>
+    <h1>Dashboard Population & IDH</h1>
     <div class="container">
-        <div>
-            <h2>Évolution de la Population par Continent</h2>
-            <iframe src="file:///C:/Users/Abdoulaye%20Sow/Downloads/population_par_continent.html"></iframe>
+        <div class="chart" id="population-trend">
+            <h2>Évolution de la Population (1960-2023)</h2>
+            <svg id="pop-trend-chart" width="600" height="400"></svg>
         </div>
-        <div>
-            <h2>Comparaison de l'IDH (5 premiers et 5 derniers)</h2>
-            <iframe src="file:///C:/Users/Abdoulaye%20Sow/Downloads/idh_comparaison_no_values.html"></iframe>
-        </div>
-        <div>
+        <div class="chart" id="pop-pie-1960">
             <h2>Répartition de la Population en 1960</h2>
-            <iframe src="file:///C:/Users/Abdoulaye%20Sow/Downloads/population_pie_1960.html"></iframe>
+            <svg id="pop-pie-chart-1960" width="400" height="400"></svg>
         </div>
-        <div>
+        <div class="chart" id="pop-pie-2023">
             <h2>Répartition de la Population en 2023</h2>
-            <iframe src="file:///C:/Users/Abdoulaye%20Sow/Downloads/population_pie_2023.html"></iframe>
+            <svg id="pop-pie-chart-2023" width="400" height="400"></svg>
+        </div>
+        <div class="chart" id="idh-bar">
+            <h2>IDH des 5 Pays les Plus et Moins Développés</h2>
+            <svg id="idh-chart" width="600" height="400"></svg>
         </div>
     </div>
+    <div class="tooltip"></div>
+
+    <script>
+        const populationTrendData = [
+            { year: 1960, population: 3e9 },
+            { year: 1980, population: 4e9 },
+            { year: 2000, population: 6e9 },
+            { year: 2020, population: 7.8e9 },
+            { year: 2023, population: 8e9 }
+        ];
+
+        const pieData1960 = [
+            { continent: "Africa", population: 211616618 },
+            { continent: "Asia", population: 2556013000 },
+            { continent: "Europe", population: 665217474 },
+            { continent: "North America", population: 198624756 },
+            { continent: "South America", population: 368300946 },
+            { continent: "Oceania", population: 2652388000 }
+        ];
+
+        const pieData2023 = [
+            { continent: "Africa", population: 1400000000 },
+            { continent: "Asia", population: 4700000000 },
+            { continent: "Europe", population: 750000000 },
+            { continent: "North America", population: 380000000 },
+            { continent: "South America", population: 430000000 },
+            { continent: "Oceania", population: 44000000 }
+        ];
+
+        const idhData = [
+            { country: "Switzerland", idh: 0.96 },
+            { country: "Norway", idh: 0.95 },
+            { country: "Iceland", idh: 0.94 },
+            { country: "Hong Kong", idh: 0.94 },
+            { country: "Australia", idh: 0.93 },
+            { country: "Niger", idh: 0.39 },
+            { country: "Chad", idh: 0.40 },
+            { country: "South Sudan", idh: 0.41 },
+            { country: "Central African Republic", idh: 0.42 },
+            { country: "Burundi", idh: 0.43 }
+        ];
+
+        function drawPieChart(id, data) {
+            const width = 400, height = 400, radius = Math.min(width, height) / 2;
+            const svg = d3.select(id)
+                .append("g")
+                .attr("transform", `translate(${width / 2}, ${height / 2})`);
+            
+            const color = d3.scaleOrdinal(d3.schemeCategory10);
+            const pie = d3.pie().value(d => d.population);
+            const arc = d3.arc().innerRadius(0).outerRadius(radius);
+            
+            svg.selectAll(".arc")
+                .data(pie(data))
+                .enter().append("path")
+                .attr("d", arc)
+                .attr("fill", d => color(d.data.continent))
+                .on("mouseover", function(event, d) {
+                    d3.select(".tooltip").style("display", "block")
+                        .html(`<strong>${d.data.continent}</strong><br>Population: ${d.data.population.toLocaleString()}`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 10) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.select(".tooltip").style("display", "none");
+                });
+        }
+        
+        drawPieChart("#pop-pie-chart-1960", pieData1960);
+        drawPieChart("#pop-pie-chart-2023", pieData2023);
+    </script>
 </body>
 </html>
